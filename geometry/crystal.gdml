@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<gdml xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+xsi:noNamespaceSchemaLocation="http://service-spi.web.cern.ch/service-spi/app/releases/GDML/schema/gdml.xsd">
+
+  <define>
+    <quantity name="WorldLength" type="length" value="1" unit="m"/>
+    <quantity name="CrystalX" type="length" value="25" unit="mm"/>
+    <quantity name="CrystalY" type="length" value="25" unit="mm"/>
+    <quantity name="CrystalZ" type="length" value="200" unit="mm"/>
+    <position name="Origin" x="0" y="0" z="0"/>
+    <rotation name="NoRotation" z="0"/>
+  </define>
+
+  <materials>
+  </materials>
+
+  <solids>
+    <box name="WorldBox" x="WorldLength" y="WorldLength" z="WorldLength"/>
+    <box name="CrystalBox" x="CrystalX" y="CrystalY" z="CrystalZ"/>
+  </solids>
+
+  <structure>
+    <volume name="Crystal">
+      <materialref ref="G4_Pb"/>
+      <solidref ref="CrystalBox"/>
+    </volume>
+
+    <volume name="World">
+      <materialref ref="G4_Galactic"/>
+      <solidref ref="WorldBox"/>
+      <physvol>
+        <volumeref ref="Crystal"/>
+        <positionref ref="Origin"/>
+        <rotationref ref="NoRotation"/>
+      </physvol>
+    </volume>
+  </structure>
+
+  <setup name="Default" version="1.0">
+    <world ref="World"/>
+  </setup>
+
+</gdml>

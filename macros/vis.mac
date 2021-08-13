@@ -1,0 +1,35 @@
+/g4simple/setReferencePhysList QGSP_BERT
+/g4simple/setDetectorGDML geometry/crystal.gdml
+/run/initialize
+/vis/open RayTracer
+
+# /vis/geometry/set/colour volname depth red green blue opacity
+/vis/geometry/set/colour Crystal 0 0 0 1 0.1
+
+/vis/viewer/set/upVector 0 1 0
+
+#/vis/viewer/set/style surface
+/vis/viewer/set/style wireframe
+
+/vis/viewer/set/viewpointThetaPhi 70 30
+/vis/viewer/set/background white 0
+/vis/viewer/set/lightsThetaPhi 30 30
+/vis/viewer/set/lightsVector 0 0 1
+/vis/viewer/zoom 0.75
+
+/g4simple/setVolID Crystal_PV 1
+
+/vis/drawVolume
+/vis/scene/add/trajectories
+/vis/scene/add/hits
+/vis/scene/endOfEventAction accumulate
+/tracking/verbose 0
+
+/gps/particle gamma
+/gps/energy 3 MeV
+/gps/position 0 0 0 cm
+/gps/direction 0 0 -1
+
+/run/beamOn 10
+
+/vis/viewer/flush
