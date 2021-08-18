@@ -1,4 +1,5 @@
 .DS_Store
-**/*.root
 setup.sh
+*.hdf5
+*.jpeg
 build/

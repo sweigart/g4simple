@@ -9,10 +9,16 @@
 #include "G4EventManager.hh"
 #include "G4GDMLParser.hh"
 #include "G4GeneralParticleSource.hh"
+#include "G4LogicalBorderSurface.hh"
+#include "G4Material.hh"
+#include "G4NistManager.hh"
+#include "G4OpticalSurface.hh"
 #include "G4PhysicalVolumeStore.hh"
 #include "G4PhysListFactory.hh"
+#include "G4PVPlacement.hh"
 #include "G4Run.hh"
 #include "G4RunManager.hh"
+#include "G4SystemOfUnits.hh"
 #include "G4tgbVolumeMgr.hh"
 #include "G4tgrMessenger.hh"
 #include "G4TouchableHandle.hh"
@@ -23,6 +29,7 @@
 #include "G4UImanager.hh"
 #include "G4UItcsh.hh"
 #include "G4UIterminal.hh"
+#include "G4UnitsTable.hh"
 #include "G4UserSteppingAction.hh"
 #include "G4VisExecutive.hh"
 #include "G4VUserDetectorConstruction.hh"
@@ -298,12 +305,13 @@ class G4SimpleSteppingAction : public G4UserSteppingAction, public G4UImessenger
         if (fWV   ) man->FillNtupleIColumn(iCol++, fVolID     [i]);
         if (fWV   ) man->FillNtupleIColumn(iCol++, fIRep      [i]);
       }
+
       // for event-wise, manager copies data from vectors over
       // automatically in the next line
       man->AddNtupleRow();
     }
 
-    void UserSteppingAction(const G4Step *step) {
+    void UserSteppingAction(const G4Step* step) {
       // This is the main function where we decide what to pull out and write
       // to an output file
       G4VAnalysisManager* man = GetAnalysisManager();
@@ -357,6 +365,7 @@ class G4SimpleSteppingAction : public G4UserSteppingAction, public G4UImessenger
           std::cout << "ERROR: Unknown output option " << fOption << std::endl;
           return;
         }
+
         man->FinishNtuple();
 
         // look for filename set by macro command: /analysis/setFileName [name]
@@ -442,23 +451,431 @@ class G4SimplePrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction {
 
 class G4SimpleDetectorConstruction : public G4VUserDetectorConstruction {
   public:
-    G4SimpleDetectorConstruction(G4VPhysicalVolume* world = 0) {
-      fWorld = world;
-    }
+    G4SimpleDetectorConstruction() {}
 
     virtual G4VPhysicalVolume* Construct() {
-      return fWorld;
+      G4NistManager* nistManager = G4NistManager::Instance();
+
+      G4Material* mGalactic = nistManager->FindOrBuildMaterial("G4_Galactic");
+      G4Material* mCe       = nistManager->FindOrBuildMaterial("G4_Ce"      );
+      G4Material* mO        = nistManager->FindOrBuildMaterial("G4_O"       );
+      G4Material* mSi       = nistManager->FindOrBuildMaterial("G4_Si"      );
+      G4Material* mLu       = nistManager->FindOrBuildMaterial("G4_Lu"      );
+      G4Material* mY        = nistManager->FindOrBuildMaterial("G4_Y"       );
+
+      G4Material* mLYSO = new G4Material("LYSO", 7.4 * g / cm3, 5);
+
+      double pCe = 0.01;
+      double pO  = (1 - pCe) * 5.0 / 8.0;
+      double pSi = (1 - pCe) * 1.0 / 8.0;
+      double pLu = (1 - pCe) * 2.0 / 8.0 * (1 - 0.05);
+      double pY  = (1 - pCe) * 2.0 / 8.0 * (    0.05);
+
+      mLYSO->AddMaterial(mCe, pCe);
+      mLYSO->AddMaterial(mO , pO );
+      mLYSO->AddMaterial(mSi, pSi);
+      mLYSO->AddMaterial(mLu, pLu);
+      mLYSO->AddMaterial(mY , pY );
+
+      G4MaterialPropertiesTable* table_LYSO = new G4MaterialPropertiesTable();
+
+      const G4int nEntries_LYSO = 117;
+
+      G4double wavelength_LYSO[nEntries_LYSO] = {
+        361.14468864468864 * nm,
+        364.97252747252750 * nm,
+        368.45238095238096 * nm,
+        371.75824175824175 * nm,
+        373.98851148851150 * nm,
+        376.05006105006106 * nm,
+        377.37345987345986 * nm,
+        378.54395604395610 * nm,
+        379.70390720390720 * nm,
+        380.24521774521776 * nm,
+        380.67053317053320 * nm,
+        381.29304029304030 * nm,
+        381.91941391941396 * nm,
+        382.31379731379730 * nm,
+        383.06776556776560 * nm,
+        382.83577533577534 * nm,
+        383.76373626373630 * nm,
+        385.38461538461536 * nm,
+        386.92307692307690 * nm,
+        389.12271062271066 * nm,
+        388.63553113553115 * nm,
+        389.92804814233386 * nm,
+        389.67948717948720 * nm,
+        390.72344322344327 * nm,
+        390.37545787545787 * nm,
+        391.26475376475380 * nm,
+        392.11538461538464 * nm,
+        392.02838827838830 * nm,
+        392.60256410256410 * nm,
+        393.13034188034190 * nm,
+        393.99450549450546 * nm,
+        395.49581371009940 * nm,
+        395.07326007326010 * nm,
+        394.96886446886447 * nm,
+        396.37820512820514 * nm,
+        396.94851444851446 * nm,
+        397.68315018315020 * nm,
+        398.51296139757676 * nm,
+        399.51007326007330 * nm,
+        400.62520812520813 * nm,
+        403.94688644688640 * nm,
+        407.77472527472526 * nm,
+        411.60256410256410 * nm,
+        415.43040293040290 * nm,
+        419.20470555085940 * nm,
+        421.74053724053726 * nm,
+        424.40345368916803 * nm,
+        426.40775890775890 * nm,
+        428.30586080586080 * nm,
+        430.04578754578756 * nm,
+        431.23888016745160 * nm,
+        432.82967032967030 * nm,
+        434.11721611721610 * nm,
+        435.04412254412256 * nm,
+        436.43606393606400 * nm,
+        437.75946275946274 * nm,
+        439.15140415140417 * nm,
+        440.54334554334554 * nm,
+        441.78238428238430 * nm,
+        443.21123321123320 * nm,
+        444.62953712953714 * nm,
+        445.67032967032970 * nm,
+        446.68581418581425 * nm,
+        448.10939060939063 * nm,
+        449.01098901098900 * nm,
+        450.11294261294260 * nm,
+        451.15689865689865 * nm,
+        452.20085470085473 * nm,
+        453.39560439560444 * nm,
+        454.40476190476190 * nm,
+        455.20015698587133 * nm,
+        456.46103896103900 * nm,
+        457.50183150183150 * nm,
+        458.87057387057393 * nm,
+        460.40081713158640 * nm,
+        461.94444444444446 * nm,
+        463.99369149369150 * nm,
+        465.22130647130650 * nm,
+        467.28021978021980 * nm,
+        469.02014652014657 * nm,
+        470.91824841824850 * nm,
+        472.68981018981015 * nm,
+        474.90912933220625 * nm,
+        477.02380952380950 * nm,
+        479.13848971541280 * nm,
+        481.59401709401710 * nm,
+        484.30830280830276 * nm,
+        488.15934065934070 * nm,
+        491.98717948717956 * nm,
+        495.81501831501840 * nm,
+        499.66962524654830 * nm,
+        503.47069597069594 * nm,
+        507.29853479853480 * nm,
+        511.12637362637360 * nm,
+        514.95421245421240 * nm,
+        518.78205128205130 * nm,
+        522.60989010989010 * nm,
+        526.43772893772890 * nm,
+        530.26556776556780 * nm,
+        534.09340659340660 * nm,
+        537.92124542124540 * nm,
+        541.74908424908430 * nm,
+        545.57692307692310 * nm,
+        549.40476190476190 * nm,
+        553.23260073260080 * nm,
+        557.06043956043960 * nm,
+        560.88827838827840 * nm,
+        564.71611721611730 * nm,
+        568.54395604395610 * nm,
+        572.37179487179490 * nm,
+        576.19963369963380 * nm,
+        580.02747252747260 * nm,
+        583.85531135531140 * nm,
+        587.68315018315020 * nm,
+        591.51098901098910 * nm,
+        595.33882783882790 * nm,
+        598.81868131868130 * nm};
+
+      G4double emission_LYSO  [nEntries_LYSO] = {
+        0.17844558542233813,
+        0.80967482130273540,
+        1.87553832902671050,
+        2.83657649106154960,
+        4.15232054766939000,
+        5.37652270210411100,
+        6.66289137219371200,
+        7.87806078503754750,
+        9.08499446290144900,
+        10.4731143103236230,
+        11.7998646487018560,
+        13.3931339977851700,
+        15.2973421926910330,
+        17.1419342930970940,
+        19.7467290102949140,
+        18.2290513104466640,
+        21.7534145441122180,
+        24.1860465116279070,
+        26.9767441860465030,
+        31.7724252491694300,
+        30.6256921373200440,
+        34.7136529030216800,
+        33.3084163898117400,
+        37.1934820439803800,
+        35.8333333333333300,
+        38.8959640703826750,
+        41.4837117017349600,
+        40.0283776301218100,
+        43.4186046511627950,
+        44.9949243263196760,
+        46.6168327796234700,
+        50.7235801297263100,
+        49.0891472868217000,
+        47.9529346622369840,
+        52.5170727205610750,
+        53.8467454165128460,
+        55.0975144579795640,
+        56.4332566658147950,
+        57.9877260981912000,
+        59.3705325682069760,
+        60.1117487163998660,
+        60.2360817477096400,
+        60.0782744387395400,
+        59.6670190274841400,
+        58.9136638555243050,
+        57.7755629383536200,
+        56.5436639772187850,
+        55.2627604953186240,
+        54.0442967884828300,
+        52.8414544112218400,
+        51.7718715393133950,
+        50.6204626553463650,
+        49.3311184939091800,
+        48.2379442263163100,
+        47.1189469445283300,
+        45.9066998892580140,
+        44.6573920265780800,
+        43.3817829457364200,
+        42.0882412161481900,
+        40.6902916205241640,
+        39.3404812242021500,
+        37.9795127353266800,
+        36.6319339575153600,
+        35.1877579784556500,
+        33.8475913621262400,
+        32.6479635781961260,
+        31.3621262458471800,
+        30.0762889134982170,
+        28.7372646733111740,
+        27.4344776670358070,
+        26.3573801613668760,
+        25.1598207993556850,
+        23.8715393133997800,
+        22.5512181616832800,
+        21.1572535991140700,
+        19.7054263565891570,
+        18.4847575981296900,
+        17.2734403839055100,
+        15.9706533776301280,
+        14.7555370985603530,
+        13.5681566495520090,
+        12.4013389711064120,
+        11.2275321577647280,
+        10.0493724621631630,
+        8.99799812590511300,
+        7.91196013289037100,
+        6.91602067183463000,
+        6.04122621564484100,
+        5.16133091714488050,
+        4.43446088794927100,
+        3.69324473975638060,
+        3.21504077318032000,
+        2.83247759991947130,
+        2.55033725963959060,
+        2.33992751434612960,
+        2.11995368972114300,
+        1.88563374609887550,
+        1.68957011980269560,
+        1.51263465216953820,
+        1.35482734319944600,
+        1.19702003422933960,
+        1.03921272525924730,
+        0.89575153528642200,
+        0.73316218665057420,
+        0.55622671901743100,
+        0.40798348937885010,
+        0.36494513238699255,
+        0.31234269606362375,
+        0.25017618040874370,
+        0.22148394241418146,
+        0.22148394241418146,
+        0.20235578375113050,
+        0.14018926809625043,
+        0.11627906976745805,
+        0.07802275244138457,
+        0.06367663344408925,
+        0.06367663344408925};
+
+      G4double photonEnergy_LYSO    [nEntries_LYSO];
+      G4double refractiveIndex_LYSO [nEntries_LYSO];
+      G4double absorptionLength_LYSO[nEntries_LYSO];
+
+      double maxEmission_LYSO = *std::max_element(std::begin(emission_LYSO), std::end(emission_LYSO));
+
+      for (int i = 0; i < nEntries_LYSO; ++i){
+        photonEnergy_LYSO    [i]  = 0.001240 * MeV * nm / wavelength_LYSO[i];
+        emission_LYSO        [i] /= maxEmission_LYSO;
+        refractiveIndex_LYSO [i]  = 1.83;
+        absorptionLength_LYSO[i]  = 20.0;
+      }
+
+      table_LYSO->AddProperty("FASTCOMPONENT", photonEnergy_LYSO, emission_LYSO        , nEntries_LYSO);
+      table_LYSO->AddProperty("SLOWCOMPONENT", photonEnergy_LYSO, emission_LYSO        , nEntries_LYSO);
+      table_LYSO->AddProperty("RINDEX"       , photonEnergy_LYSO, refractiveIndex_LYSO , nEntries_LYSO);
+      table_LYSO->AddProperty("ABSLENGTH"    , photonEnergy_LYSO, absorptionLength_LYSO, nEntries_LYSO);
+
+      table_LYSO->AddConstProperty("FASTTIMECONSTANT"  ,    42.0 * ns );
+      table_LYSO->AddConstProperty("SLOWTIMECONSTANT"  ,    42.0 * ns );
+      table_LYSO->AddConstProperty("SCINTILLATIONYIELD", 32300.0 / MeV);
+      table_LYSO->AddConstProperty("RESOLUTIONSCALE"   ,     1.0      );
+      table_LYSO->AddConstProperty("YIELDRATIO"        ,     1.0      );
+
+      mLYSO->SetMaterialPropertiesTable(table_LYSO);
+
+      int nXtalRows = 1;
+      int nXtalCols = 1;
+
+      double xtalGap    =  0.00; // cm
+      double xtalWidth  =  2.50; // cm
+      double xtalHeight =  2.50; // cm
+      double xtalDepth  = 14.00; // cm
+
+      double radial    = (nXtalCols * xtalWidth ) + ((nXtalCols + 1) * xtalGap);
+      double vertical  = (nXtalRows * xtalHeight) + ((nXtalRows + 1) * xtalGap);
+      double thickness = xtalDepth + xtalGap;
+
+      G4double const r_2 = radial    / 2.0;
+      G4double const v_2 = vertical  / 2.0;
+      G4double const t_2 = thickness / 2.0;
+
+      G4Box* world_S = new G4Box("world_S", 300 * cm, 300 * cm, 300 * cm);
+      G4LogicalVolume* world_L = new G4LogicalVolume(world_S, mGalactic, "world_L");
+      world_P = new G4PVPlacement(0, G4ThreeVector(0, 0, 0), world_L, "world_P", 0, false, 0, true);
+
+      G4Box* xtal_S = new G4Box("PbF2", r_2, v_2, t_2);
+      G4LogicalVolume* xtal_L = new G4LogicalVolume(xtal_S, mLYSO, "xtal_L");
+      G4VPhysicalVolume* xtal_P = new G4PVPlacement(0, G4ThreeVector(0, 0, -0.5 * xtalDepth), xtal_L, "xtal_P", world_L, false, 0, true);
+
+      G4OpticalSurface* tedlar = new G4OpticalSurface("Tedlar");
+
+      tedlar->SetType      (dielectric_dielectric);
+      tedlar->SetModel     (unified              );
+      tedlar->SetFinish    (groundbackpainted    );
+      tedlar->SetSigmaAlpha(0.07379              );
+
+      const G4int nEntries_tedlar = 24;
+
+      G4double photonEnergy_tedlar[nEntries_tedlar] = {
+        1.38 * eV,
+        1.55 * eV,
+        1.77 * eV,
+        1.82 * eV,
+        1.88 * eV,
+        1.94 * eV,
+        2.00 * eV,
+        2.07 * eV,
+        2.14 * eV,
+        2.21 * eV,
+        2.30 * eV,
+        2.38 * eV,
+        2.48 * eV,
+        2.58 * eV,
+        2.70 * eV,
+        2.82 * eV,
+        2.95 * eV,
+        3.10 * eV,
+        3.31 * eV,
+        3.54 * eV,
+        3.81 * eV,
+        4.13 * eV,
+        4.51 * eV,
+        4.96 * eV};
+
+      G4double reflectivity_tedlar[nEntries_tedlar] = {
+        0.0669,
+        0.0741,
+        0.0708,
+        0.0708,
+        0.0708,
+        0.0713,
+        0.0718,
+        0.0728,
+        0.0735,
+        0.0741,
+        0.0749,
+        0.0760,
+        0.0776,
+        0.0788,
+        0.0805,
+        0.0821,
+        0.0835,
+        0.0831,
+        0.0679,
+        0.0601,
+        0.0605,
+        0.0631,
+        0.0635,
+        0.0637};
+
+      G4double refractiveIndex_tedlar[nEntries_tedlar];
+      G4double specularSpike_tedlar  [nEntries_tedlar];
+      G4double specularLobe_tedlar   [nEntries_tedlar];
+      G4double backscatter_tedlar    [nEntries_tedlar];
+
+      std::fill_n(refractiveIndex_tedlar, nEntries_tedlar, 1.0);
+      std::fill_n(specularSpike_tedlar  , nEntries_tedlar, 0.0);
+      std::fill_n(specularLobe_tedlar   , nEntries_tedlar, 1.0);
+      std::fill_n(backscatter_tedlar    , nEntries_tedlar, 0.0);
+
+      G4MaterialPropertiesTable* table_tedlar = new G4MaterialPropertiesTable();
+
+      table_tedlar->AddProperty("RINDEX"               , photonEnergy_tedlar, refractiveIndex_tedlar, nEntries_tedlar);
+      table_tedlar->AddProperty("SPECULARSPIKECONSTANT", photonEnergy_tedlar, specularSpike_tedlar  , nEntries_tedlar);
+      table_tedlar->AddProperty("SPECULARLOBECONSTANT" , photonEnergy_tedlar, specularLobe_tedlar   , nEntries_tedlar);
+      table_tedlar->AddProperty("BACKSCATTERCONSTANT"  , photonEnergy_tedlar, backscatter_tedlar    , nEntries_tedlar);
+      table_tedlar->AddProperty("REFLECTIVITY"         , photonEnergy_tedlar, reflectivity_tedlar   , nEntries_tedlar);
+
+      tedlar->SetMaterialPropertiesTable(table_tedlar);
+
+      G4OpticalSurface* tedlarReverse = new G4OpticalSurface("TedlarReverse");
+
+      tedlarReverse->SetType  (dielectric_dielectric);
+      tedlarReverse->SetModel (unified              );
+      tedlarReverse->SetFinish(groundfrontpainted   );
+
+      G4MaterialPropertiesTable* table_tedlarReverse = new G4MaterialPropertiesTable();
+
+      table_tedlarReverse->AddProperty("REFLECTIVITY", photonEnergy_tedlar, reflectivity_tedlar, nEntries_tedlar);
+
+      tedlarReverse->SetMaterialPropertiesTable(table_tedlarReverse);
+
+      new G4LogicalBorderSurface("LYSOSurface"       , xtal_P, world_P, tedlar       );
+      new G4LogicalBorderSurface("LYSOSurfaceReverse", world_P, xtal_P, tedlarReverse);
+
+      return world_P;
     }
 
   private:
-    G4VPhysicalVolume* fWorld;
+    G4VPhysicalVolume* world_P;
 };
 
 class G4SimpleRunManager : public G4RunManager, public G4UImessenger {
   private:
     G4UIdirectory     * fDirectory;
     G4UIcmdWithAString* fPhysListCmd;
-    G4UIcommand       * fDetectorCmd;
     G4UIcmdWithABool  * fRandomSeedCmd;
     G4UIcmdWithAString* fListVolsCmd;
 
@@ -469,9 +886,6 @@ class G4SimpleRunManager : public G4RunManager, public G4UImessenger {
 
       fPhysListCmd = new G4UIcmdWithAString("/g4simple/setReferencePhysList", this);
       fPhysListCmd->SetGuidance("Set reference physics list to be used");
-
-      fDetectorCmd = new G4UIcmdWithAString("/g4simple/setDetectorGDML", this);
-      fDetectorCmd->SetGuidance("Provide GDML filename specifying the detector construction");
 
       fRandomSeedCmd = new G4UIcmdWithABool("/g4simple/setRandomSeed", this);
       fRandomSeedCmd->SetParameterName("useURandom", true);
@@ -489,7 +903,6 @@ class G4SimpleRunManager : public G4RunManager, public G4UImessenger {
     ~G4SimpleRunManager() {
       delete fDirectory;
       delete fPhysListCmd;
-      delete fDetectorCmd;
       delete fRandomSeedCmd;
       delete fListVolsCmd;
     }
@@ -499,10 +912,6 @@ class G4SimpleRunManager : public G4RunManager, public G4UImessenger {
         SetUserInitialization((new G4PhysListFactory)->GetReferencePhysList(newValues));
         SetUserAction(new G4SimplePrimaryGeneratorAction); // must come after phys list
         SetUserAction(new G4SimpleSteppingAction); // must come after phys list
-      } else if (command == fDetectorCmd) {
-        G4GDMLParser parser;
-        parser.Read(newValues, true);
-        SetUserInitialization(new G4SimpleDetectorConstruction(parser.GetWorldVolume())); // <====== !!!!!!!!!
       } else if (command == fRandomSeedCmd) {
         bool useURandom = fRandomSeedCmd->GetNewBoolValue(newValues);
         std::string path = useURandom ? "/dev/urandom" : "/dev/random";
@@ -544,9 +953,11 @@ int main(int argc, char** argv) {
     return 1;
   }
 
-  G4SimpleRunManager* runManager = new G4SimpleRunManager;
   G4VisManager      * visManager = new G4VisExecutive;
+  G4SimpleRunManager* runManager = new G4SimpleRunManager;
+
   visManager->Initialize();
+  runManager->SetUserInitialization(new G4SimpleDetectorConstruction());
 
   if (argc == 1) {
     (new G4UIterminal(new G4UItcsh))->SessionStart();

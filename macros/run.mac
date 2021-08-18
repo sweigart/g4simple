@@ -9,9 +9,6 @@
 /g4simple/setReferencePhysList QGSP_BERT
 #/g4simple/setReferencePhysList Shielding
 
-# Set GDML file name
-/g4simple/setDetectorGDML geometry/crystal.gdml
-
 # Uncomment to override an output's standard option
 #/g4simple/setOutputOption stepwise
 #/g4simple/setOutputOption eventwise
@@ -30,7 +27,7 @@
 
 # Steps are only written out if they are in a volume that matches a pattern set via the setVolID command
 # Example setting a full volume name (exact match):
-/g4simple/setVolID Crystal_PV 1
+/g4simple/setVolID xtal_P 1
 
 # Example using a regular expression to match multiple volumes, extract an integer from the name, and set it as the volID
 #/g4simple/setVolID .*Detector([0-9]*).* $1
@@ -49,4 +46,4 @@
 /gps/position 0 0 0 cm
 /gps/direction 0 0 1
 
-/run/beamOn 1000
+/run/beamOn 10
