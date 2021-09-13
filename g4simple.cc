@@ -13,6 +13,7 @@
 #include "G4Material.hh"
 #include "G4NistManager.hh"
 #include "G4OpticalSurface.hh"
+#include "G4PhysicalConstants.hh"
 #include "G4PhysicalVolumeStore.hh"
 #include "G4PhysListFactory.hh"
 #include "G4PVPlacement.hh"
@@ -145,7 +146,7 @@ class G4SimpleSteppingAction : public G4UserSteppingAction, public G4UImessenger
       delete fRecordAllStepsCmd;
     } 
 
-    void SetNewValue(G4UIcommand *command, G4String newValues) {
+    void SetNewValue(G4UIcommand* command, G4String newValues) {
       if (command == fVolIDCmd) {
         std::istringstream iss(newValues);
         std::string pattern;
@@ -367,9 +368,7 @@ class G4SimpleSteppingAction : public G4UserSteppingAction, public G4UImessenger
         }
 
         man->FinishNtuple();
-
-        // look for filename set by macro command: /analysis/setFileName [name]
-	      if (man->GetFileName() == "") man->SetFileName("g4simpleout");
+	      man->SetFileName("g4simple");
         std::cout << "Opening file " << man->GetFileName() << std::endl;
         man->OpenFile();
 
@@ -456,12 +455,28 @@ class G4SimpleDetectorConstruction : public G4VUserDetectorConstruction {
     virtual G4VPhysicalVolume* Construct() {
       G4NistManager* nistManager = G4NistManager::Instance();
 
-      G4Material* mGalactic = nistManager->FindOrBuildMaterial("G4_Galactic");
-      G4Material* mCe       = nistManager->FindOrBuildMaterial("G4_Ce"      );
-      G4Material* mO        = nistManager->FindOrBuildMaterial("G4_O"       );
-      G4Material* mSi       = nistManager->FindOrBuildMaterial("G4_Si"      );
-      G4Material* mLu       = nistManager->FindOrBuildMaterial("G4_Lu"      );
-      G4Material* mY        = nistManager->FindOrBuildMaterial("G4_Y"       );
+      G4Material *mVacuum = new G4Material(
+        "Vacuum",
+        1.0,
+        1.01 * g / mole,
+        universe_mean_density,
+        kStateGas,
+        3.0e-18 * pascal,
+        2.73 * kelvin);
+
+      const G4int nEntries_vacuum = 2;
+      G4double photonEnergy_vacuum   [nEntries_vacuum] = {1.0 * eV, 5.0 * eV};
+      G4double refractiveIndex_vacuum[nEntries_vacuum] = {1.0, 1.0};
+      G4MaterialPropertiesTable* table_vacuum = new G4MaterialPropertiesTable();
+      table_vacuum->AddProperty("RINDEX", photonEnergy_vacuum, refractiveIndex_vacuum, nEntries_vacuum);
+
+      mVacuum->SetMaterialPropertiesTable(table_vacuum);
+
+      G4Material* mCe = nistManager->FindOrBuildMaterial("G4_Ce");
+      G4Material* mO  = nistManager->FindOrBuildMaterial("G4_O" );
+      G4Material* mSi = nistManager->FindOrBuildMaterial("G4_Si");
+      G4Material* mLu = nistManager->FindOrBuildMaterial("G4_Lu");
+      G4Material* mY  = nistManager->FindOrBuildMaterial("G4_Y" );
 
       G4Material* mLYSO = new G4Material("LYSO", 7.4 * g / cm3, 5);
 
@@ -745,36 +760,12 @@ class G4SimpleDetectorConstruction : public G4VUserDetectorConstruction {
 
       mLYSO->SetMaterialPropertiesTable(table_LYSO);
 
-      int nXtalRows = 1;
-      int nXtalCols = 1;
+      G4OpticalSurface* mTedlar = new G4OpticalSurface("Tedlar");
 
-      double xtalGap    =  0.00; // cm
-      double xtalWidth  =  2.50; // cm
-      double xtalHeight =  2.50; // cm
-      double xtalDepth  = 14.00; // cm
-
-      double radial    = (nXtalCols * xtalWidth ) + ((nXtalCols + 1) * xtalGap);
-      double vertical  = (nXtalRows * xtalHeight) + ((nXtalRows + 1) * xtalGap);
-      double thickness = xtalDepth + xtalGap;
-
-      G4double const r_2 = radial    / 2.0;
-      G4double const v_2 = vertical  / 2.0;
-      G4double const t_2 = thickness / 2.0;
-
-      G4Box* world_S = new G4Box("world_S", 300 * cm, 300 * cm, 300 * cm);
-      G4LogicalVolume* world_L = new G4LogicalVolume(world_S, mGalactic, "world_L");
-      world_P = new G4PVPlacement(0, G4ThreeVector(0, 0, 0), world_L, "world_P", 0, false, 0, true);
-
-      G4Box* xtal_S = new G4Box("PbF2", r_2, v_2, t_2);
-      G4LogicalVolume* xtal_L = new G4LogicalVolume(xtal_S, mLYSO, "xtal_L");
-      G4VPhysicalVolume* xtal_P = new G4PVPlacement(0, G4ThreeVector(0, 0, -0.5 * xtalDepth), xtal_L, "xtal_P", world_L, false, 0, true);
-
-      G4OpticalSurface* tedlar = new G4OpticalSurface("Tedlar");
-
-      tedlar->SetType      (dielectric_dielectric);
-      tedlar->SetModel     (unified              );
-      tedlar->SetFinish    (groundbackpainted    );
-      tedlar->SetSigmaAlpha(0.07379              );
+      mTedlar->SetType      (dielectric_dielectric);
+      mTedlar->SetModel     (unified              );
+      mTedlar->SetFinish    (groundbackpainted    );
+      mTedlar->SetSigmaAlpha(0.07379              );
 
       const G4int nEntries_tedlar = 24;
 
@@ -848,22 +839,61 @@ class G4SimpleDetectorConstruction : public G4VUserDetectorConstruction {
       table_tedlar->AddProperty("BACKSCATTERCONSTANT"  , photonEnergy_tedlar, backscatter_tedlar    , nEntries_tedlar);
       table_tedlar->AddProperty("REFLECTIVITY"         , photonEnergy_tedlar, reflectivity_tedlar   , nEntries_tedlar);
 
-      tedlar->SetMaterialPropertiesTable(table_tedlar);
+      mTedlar->SetMaterialPropertiesTable(table_tedlar);
 
-      G4OpticalSurface* tedlarReverse = new G4OpticalSurface("TedlarReverse");
+      G4OpticalSurface* mTedlarReverse = new G4OpticalSurface("TedlarReverse");
 
-      tedlarReverse->SetType  (dielectric_dielectric);
-      tedlarReverse->SetModel (unified              );
-      tedlarReverse->SetFinish(groundfrontpainted   );
+      mTedlarReverse->SetType  (dielectric_dielectric);
+      mTedlarReverse->SetModel (unified              );
+      mTedlarReverse->SetFinish(groundfrontpainted   );
 
       G4MaterialPropertiesTable* table_tedlarReverse = new G4MaterialPropertiesTable();
 
       table_tedlarReverse->AddProperty("REFLECTIVITY", photonEnergy_tedlar, reflectivity_tedlar, nEntries_tedlar);
 
-      tedlarReverse->SetMaterialPropertiesTable(table_tedlarReverse);
+      mTedlarReverse->SetMaterialPropertiesTable(table_tedlarReverse);
 
-      new G4LogicalBorderSurface("LYSOSurface"       , xtal_P, world_P, tedlar       );
-      new G4LogicalBorderSurface("LYSOSurfaceReverse", world_P, xtal_P, tedlarReverse);
+      int nXtalRows = 1;
+      int nXtalCols = 1;
+
+      double wrappingGap =  0.00 * cm; // cm
+      double xtalWidth   =  2.50 * cm; // cm
+      double xtalHeight  =  2.50 * cm; // cm
+      double xtalDepth   = 14.00 * cm; // cm
+
+      G4ThreeVector xhat(1.0, 0.0, 0.0);
+      G4ThreeVector yhat(0.0, 1.0, 0.0);
+      G4ThreeVector zhat(0.0, 0.0, 1.0);
+
+      G4Box* world_S = new G4Box("world_S", 300 * cm, 300 * cm, 300 * cm);
+      G4LogicalVolume* world_L = new G4LogicalVolume(world_S, mVacuum, "world_L");
+      world_P = new G4PVPlacement(0, G4ThreeVector(0, 0, 0), world_L, "world_P", 0, false, 0, true);
+
+      G4ThreeVector xtalOrigin(0.0, 0.0, 0.0);
+
+      for (int irow = 0; irow < nXtalRows; ++irow) {
+        G4ThreeVector offset =
+          - double(nXtalCols - 1) / 2.0 * (xtalWidth + wrappingGap) * xhat
+          - (double(nXtalRows - 1) / 2.0 - double(irow)) * (xtalHeight + wrappingGap) * yhat;
+        G4ThreeVector xtalPos = xtalOrigin + offset;
+
+        for (int icol = 0; icol < nXtalCols; ++icol) {
+          G4Box* xtal_S = new G4Box(
+            "xtal_S",
+            xtalWidth  / 2.0,
+            xtalHeight / 2.0,
+            xtalDepth  / 2.0);
+
+          G4LogicalVolume  * xtal_L = new G4LogicalVolume(xtal_S, mLYSO, "xtal_L");
+          G4VPhysicalVolume* xtal_P = new G4PVPlacement  (
+            0, xtalPos, xtal_L, "xtal_P", world_L, false, irow * nXtalCols + icol, true);
+
+          new G4LogicalBorderSurface("LYSOSurface"       , xtal_P , world_P, mTedlar       );
+          new G4LogicalBorderSurface("LYSOSurfaceReverse", world_P, xtal_P , mTedlarReverse);
+
+          xtalPos += (xtalWidth + wrappingGap) * xhat;
+        }
+      }
 
       return world_P;
     }

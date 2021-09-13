@@ -1,5 +1,5 @@
 .DS_Store
 setup.sh
-*.hdf5
-*.jpeg
+**/*.hdf5
+**/*.jpeg
 build/

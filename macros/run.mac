@@ -1,13 +1,17 @@
 /run/verbose 1
-#/event/verbose 1
-#/tracking/verbose 1
+/event/verbose 1
+/tracking/verbose 1
 
 /g4simple/setRandomSeed true
 #/random/setSeeds 816006053182404087 6398280497363454802
 
 # Need to set the physics list before we can do some of the other commands. 
-/g4simple/setReferencePhysList QGSP_BERT
+/g4simple/setReferencePhysList QGSP_BERT_PEN
+#/g4simple/setReferencePhysList FTFP_BERT
 #/g4simple/setReferencePhysList Shielding
+
+/physics_lists/factory/addOptical
+/process/optical/printParameters
 
 # Uncomment to override an output's standard option
 #/g4simple/setOutputOption stepwise
@@ -42,8 +46,8 @@
 
 # Set up gps after /run/initialize
 /gps/particle e+
-/gps/energy 70 MeV
-/gps/position 0 0 0 cm
+/gps/energy 3 MeV
+/gps/position 0 0 -20 cm
 /gps/direction 0 0 1
 
-/run/beamOn 10
+/run/beamOn 1
