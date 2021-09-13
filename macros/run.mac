@@ -39,6 +39,13 @@
 # To get all steps in all volumes, comment out all setVolID commands (removes all volume IDs from output), or uncomment the following line to keep the volume IDs:
 #/g4simple/recordAllSteps
 
+/g4simple/nXtalCols 5
+/g4simple/nXtalRows 5
+/g4simple/wrappingGap 0.0
+/g4simple/xtalWidth 2.5
+/g4simple/xtalHeight 2.5
+/g4simple/xtalDepth 14.0
+
 /run/initialize
 
 # If you want to see the list of all physical volume names (e.g. to set volume IDs above) uncomment this line

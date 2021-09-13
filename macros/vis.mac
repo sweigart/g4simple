@@ -7,6 +7,13 @@
 /tracking/storeTrajectory 1
 
 /g4simple/setReferencePhysList QGSP_BERT
+/g4simple/nXtalCols 5
+/g4simple/nXtalRows 5
+/g4simple/wrappingGap 0.0
+/g4simple/xtalWidth 2.5
+/g4simple/xtalHeight 2.5
+/g4simple/xtalDepth 14.0
+
 /physics_lists/factory/addOptical
 /run/initialize
 /vis/open RayTracer
@@ -24,7 +31,7 @@
 /vis/viewer/set/background white 0
 /vis/viewer/set/lightsThetaPhi 30 30
 /vis/viewer/set/lightsVector 0 0 1
-/vis/viewer/zoom 60
+/vis/viewer/zoom 40
 
 /g4simple/setVolID xtal_P 1
 
@@ -32,6 +39,7 @@
 /vis/scene/add/axes
 /vis/scene/add/hits
 /vis/scene/add/trajectories smooth
+/vis/sceneHandler/attach
 /vis/modeling/trajectories/create/drawByCharge
 /vis/modeling/trajectories/drawByCharge-0/default/setDrawStepPts true
 /vis/modeling/trajectories/drawByCharge-0/default/setStepPtsSize 2
@@ -47,5 +55,5 @@
 
 /run/beamOn 1
 
-/vis/viewer/rebuild
-#/vis/viewer/flush
+#/vis/viewer/rebuild
+/vis/viewer/flush

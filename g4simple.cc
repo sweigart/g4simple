@@ -25,6 +25,8 @@
 #include "G4TouchableHandle.hh"
 #include "G4Track.hh"
 #include "G4UIcmdWithABool.hh"
+#include "G4UIcmdWithADouble.hh"
+#include "G4UIcmdWithAnInteger.hh"
 #include "G4UIcmdWithAString.hh"
 #include "G4UIdirectory.hh"
 #include "G4UImanager.hh"
@@ -42,7 +44,6 @@
 class G4SimpleSteppingAction : public G4UserSteppingAction, public G4UImessenger {
   protected:
     G4UIcommand       * fVolIDCmd;
-    G4UIcmdWithAString* fOutputFormatCmd;
     G4UIcmdWithAString* fOutputOptionCmd;
     G4UIcmdWithABool  * fRecordAllStepsCmd;
     G4UIcmdWithAString* fSilenceOutputCmd;
@@ -141,10 +142,11 @@ class G4SimpleSteppingAction : public G4UserSteppingAction, public G4UImessenger
 
       delete man;
       delete fVolIDCmd;
-      delete fOutputFormatCmd;
       delete fOutputOptionCmd;
       delete fRecordAllStepsCmd;
-    } 
+      delete fSilenceOutputCmd;
+      delete fAddOutputCmd;
+    }
 
     void SetNewValue(G4UIcommand* command, G4String newValues) {
       if (command == fVolIDCmd) {
@@ -153,12 +155,6 @@ class G4SimpleSteppingAction : public G4UserSteppingAction, public G4UImessenger
         std::string replacement;
         iss >> pattern >> replacement;
         fPatternPairs.push_back(std::pair<std::regex, std::string>(std::regex(pattern), replacement));
-      }
-      if (command == fOutputFormatCmd) {
-        // also set recommended options
-        // override option by subsequent call to /g4simple/setOutputOption
-        fOption = kStepWise;
-        GetAnalysisManager(); // call once to make all of the /analysis commands available
       }
       if (command == fOutputOptionCmd) {
         if (newValues == "stepwise" ) fOption = kStepWise ;
@@ -448,9 +444,78 @@ class G4SimplePrimaryGeneratorAction : public G4VUserPrimaryGeneratorAction {
     G4GeneralParticleSource fParticleGun;
 };
 
-class G4SimpleDetectorConstruction : public G4VUserDetectorConstruction {
+class G4SimpleDetectorConstruction : public G4VUserDetectorConstruction, public G4UImessenger {
+  protected:
+    G4UIcmdWithAnInteger* fNXtalColsCmd;
+    G4UIcmdWithAnInteger* fNXtalRowsCmd;
+    G4UIcmdWithADouble  * fWrappingGapCmd;
+    G4UIcmdWithADouble  * fXtalWidthCmd;
+    G4UIcmdWithADouble  * fXtalHeightCmd;
+    G4UIcmdWithADouble  * fXtalDepthCmd;
+
+    G4int    fNXtalCols;
+    G4int    fNXtalRows;
+    G4double fWrappingGap;
+    G4double fXtalWidth;
+    G4double fXtalHeight;
+    G4double fXtalDepth;
+
   public:
-    G4SimpleDetectorConstruction() {}
+    G4SimpleDetectorConstruction() {
+      fNXtalColsCmd = new G4UIcmdWithAnInteger("/g4simple/nXtalCols", this);
+      fNXtalColsCmd->SetGuidance("Set the number of crystal columns.");
+      fNXtalCols = 1;
+
+      fNXtalRowsCmd = new G4UIcmdWithAnInteger("/g4simple/nXtalRows", this);
+      fNXtalRowsCmd->SetGuidance("Set the number of crystal rows.");
+      fNXtalRows = 1;
+
+      fWrappingGapCmd = new G4UIcmdWithADouble("/g4simple/wrappingGap", this);
+      fWrappingGapCmd->SetGuidance("Set the crystal wapping gap in cm.");
+      fWrappingGap = 0.01 * cm;
+
+      fXtalWidthCmd = new G4UIcmdWithADouble("/g4simple/xtalWidth", this);
+      fXtalWidthCmd->SetGuidance("Set the crystal width in cm.");
+      fXtalWidth = 2.5 * cm;
+
+      fXtalHeightCmd = new G4UIcmdWithADouble("/g4simple/xtalHeight", this);
+      fXtalHeightCmd->SetGuidance("Set the crystal height in cm.");
+      fXtalHeight = 2.5 * cm;
+
+      fXtalDepthCmd = new G4UIcmdWithADouble("/g4simple/xtalDepth", this);
+      fXtalDepthCmd->SetGuidance("Set the crystal depth in cm.");
+      fXtalDepth = 14.0 * cm;
+    }
+
+    ~G4SimpleDetectorConstruction() {
+      delete fNXtalColsCmd;
+      delete fNXtalRowsCmd;
+      delete fWrappingGapCmd;
+      delete fXtalWidthCmd;
+      delete fXtalHeightCmd;
+      delete fXtalDepthCmd;
+    }
+
+    void SetNewValue(G4UIcommand* command, G4String newValues) {
+      if (command == fNXtalColsCmd) {
+        fNXtalCols = fNXtalColsCmd->GetNewIntValue(newValues);
+      }
+      if (command == fNXtalRowsCmd) {
+        fNXtalRows = fNXtalRowsCmd->GetNewIntValue(newValues);
+      }
+      if (command == fWrappingGapCmd) {
+        fWrappingGap = fWrappingGapCmd->GetNewDoubleValue(newValues) * cm;
+      }
+      if (command == fXtalWidthCmd) {
+        fXtalWidth = fXtalWidthCmd->GetNewDoubleValue(newValues) * cm;
+      }
+      if (command == fXtalHeightCmd) {
+        fXtalHeight = fXtalHeightCmd->GetNewDoubleValue(newValues) * cm;
+      }
+      if (command == fXtalDepthCmd) {
+        fXtalDepth = fXtalDepthCmd->GetNewDoubleValue(newValues) * cm;
+      }
+    }
 
     virtual G4VPhysicalVolume* Construct() {
       G4NistManager* nistManager = G4NistManager::Instance();
@@ -853,14 +918,6 @@ class G4SimpleDetectorConstruction : public G4VUserDetectorConstruction {
 
       mTedlarReverse->SetMaterialPropertiesTable(table_tedlarReverse);
 
-      int nXtalRows = 1;
-      int nXtalCols = 1;
-
-      double wrappingGap =  0.00 * cm; // cm
-      double xtalWidth   =  2.50 * cm; // cm
-      double xtalHeight  =  2.50 * cm; // cm
-      double xtalDepth   = 14.00 * cm; // cm
-
       G4ThreeVector xhat(1.0, 0.0, 0.0);
       G4ThreeVector yhat(0.0, 1.0, 0.0);
       G4ThreeVector zhat(0.0, 0.0, 1.0);
@@ -871,27 +928,27 @@ class G4SimpleDetectorConstruction : public G4VUserDetectorConstruction {
 
       G4ThreeVector xtalOrigin(0.0, 0.0, 0.0);
 
-      for (int irow = 0; irow < nXtalRows; ++irow) {
+      for (int irow = 0; irow < fNXtalRows; ++irow) {
         G4ThreeVector offset =
-          - double(nXtalCols - 1) / 2.0 * (xtalWidth + wrappingGap) * xhat
-          - (double(nXtalRows - 1) / 2.0 - double(irow)) * (xtalHeight + wrappingGap) * yhat;
+          - double(fNXtalCols - 1) / 2.0 * (fXtalWidth + fWrappingGap) * xhat
+          - (double(fNXtalRows - 1) / 2.0 - double(irow)) * (fXtalHeight + fWrappingGap) * yhat;
         G4ThreeVector xtalPos = xtalOrigin + offset;
 
-        for (int icol = 0; icol < nXtalCols; ++icol) {
+        for (int icol = 0; icol < fNXtalCols; ++icol) {
           G4Box* xtal_S = new G4Box(
             "xtal_S",
-            xtalWidth  / 2.0,
-            xtalHeight / 2.0,
-            xtalDepth  / 2.0);
+            fXtalWidth  / 2.0,
+            fXtalHeight / 2.0,
+            fXtalDepth  / 2.0);
 
           G4LogicalVolume  * xtal_L = new G4LogicalVolume(xtal_S, mLYSO, "xtal_L");
           G4VPhysicalVolume* xtal_P = new G4PVPlacement  (
-            0, xtalPos, xtal_L, "xtal_P", world_L, false, irow * nXtalCols + icol, true);
+            0, xtalPos, xtal_L, "xtal_P", world_L, false, irow * fNXtalCols + icol, true);
 
           new G4LogicalBorderSurface("LYSOSurface"       , xtal_P , world_P, mTedlar       );
           new G4LogicalBorderSurface("LYSOSurfaceReverse", world_P, xtal_P , mTedlarReverse);
 
-          xtalPos += (xtalWidth + wrappingGap) * xhat;
+          xtalPos += (fXtalWidth + fWrappingGap) * xhat;
         }
       }
 
